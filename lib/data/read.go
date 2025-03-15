@@ -9,14 +9,14 @@ import (
 )
 
 func Read() error {
-	var readCount = 0
+	readCount := 0
 
 	appDataDir, err := os.UserCacheDir()
 	if err != nil {
 		panic(err)
 	}
 
-	var readData = func(path string, file fs.DirEntry, err error) error {
+	readData := func(path string, file fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -24,16 +24,21 @@ func Read() error {
 		if !file.IsDir() {
 			if filepath.Base(path) == "Characters.json" {
 				log.Printf("Reading Character data from %q\n", path)
+
 				if err := ReadCharacterData(path); err != nil {
 					return fmt.Errorf("reading Character data: %w", err)
 				}
+
 				readCount++
 			}
+
 			if filepath.Base(path) == "Profile.json" {
 				log.Printf("Reading Profile data from %q", path)
+
 				if err := ReadProfileData(path); err != nil {
 					return fmt.Errorf("reading Profile data: %w", err)
 				}
+
 				readCount++
 			}
 		}

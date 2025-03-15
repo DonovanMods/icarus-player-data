@@ -22,7 +22,10 @@ type Profile struct {
 	Talents       []Talents       `json:"Talents"`
 }
 
-var ProfileData Profile
+var (
+	ProfileData Profile
+	ProfilePath string
+)
 
 func ReadProfileData(path string) error {
 	file, err := os.Open(path)
@@ -34,6 +37,9 @@ func ReadProfileData(path string) error {
 	if err := json.NewDecoder(file).Decode(&ProfileData); err != nil {
 		return err
 	}
+
+	// Save the filepath we read from
+	ProfilePath = path
 
 	return nil
 }
