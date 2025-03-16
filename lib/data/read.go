@@ -8,6 +8,11 @@ import (
 	"path/filepath"
 )
 
+var (
+	CharacterData *characterData
+	ProfileData   *profileData
+)
+
 func Read() error {
 	readCount := 0
 
@@ -25,7 +30,8 @@ func Read() error {
 			if filepath.Base(path) == "Characters.json" {
 				log.Printf("Reading Character data from %q\n", path)
 
-				if err := ReadCharacterData(path); err != nil {
+				CharacterData, err = createCharacterData(path)
+				if err != nil {
 					return fmt.Errorf("reading Character data: %w", err)
 				}
 
@@ -35,7 +41,8 @@ func Read() error {
 			if filepath.Base(path) == "Profile.json" {
 				log.Printf("Reading Profile data from %q", path)
 
-				if err := ReadProfileData(path); err != nil {
+				ProfileData, err = createProfileData(path)
+				if err != nil {
 					return fmt.Errorf("reading Profile data: %w", err)
 				}
 

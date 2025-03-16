@@ -2,12 +2,18 @@ package data
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
 	"log"
 	"os"
 	"sort"
+	"strings"
+
+	"github.com/rivo/tview"
 )
 
-type Cosmetics struct {
+type cosmetics struct {
 	CustomizationHead           int64 `json:"Customization_Head"`
 	CustomizationHair           int64 `json:"Customization_Hair"`
 	CustomizationHairColor      int64 `json:"Customization_HairColor"`
@@ -23,38 +29,99 @@ type Cosmetics struct {
 	CustomizationEyeColor       int64 `json:"Customization_EyeColor"`
 }
 
+type characterJson struct {
+	JsonData []string `json:"Characters.json"`
+}
+
+/*
+// Character struct
+*/
 type Character struct {
-	CharacterName  string          `json:"CharacterName"`
-	ChrSlot        int             `json:"ChrSlot"`
-	XP             int64           `json:"XP"`
-	XP_Debt        int64           `json:"XP_Debt"`
+	Name           string          `json:"CharacterName"`
+	Slot           int             `json:"ChrSlot"`
+	XP             uint64          `json:"XP"`
+	XP_Debt        uint64          `json:"XP_Debt"`
 	IsDead         bool            `json:"IsDead"`
 	IsAbandoned    bool            `json:"IsAbandoned"`
 	LastProspectId string          `json:"LastProspectId"`
 	Location       string          `json:"Location"`
 	UnlockedFlags  []int           `json:"UnlockedFlags"`
-	MetaResources  []MetaResources `json:"MetaResources"`
-	Cosmetic       Cosmetics       `json:"Cosmetic"`
-	Talents        []Talents       `json:"Talents"`
+	MetaResources  []metaResources `json:"MetaResources"`
+	Cosmetic       cosmetics       `json:"Cosmetic"`
+	Talents        []talents       `json:"Talents"`
 	TimeLastPlayed uint64          `json:"TimeLastPlayed"`
 }
 
-type charactersJson struct {
-	JsonData []string `json:"Characters.json"`
+func (C *Character) Level() int {
+	xpTable := buildExperienceTable()
+
+	return xpTable.Level(C.XP)
 }
 
-var (
-	CharacterData []Character
-	CharacterPath string
-)
+func (C *Character) nameString() string {
+	status := make([]string, 0, 2)
+	statusString := ""
 
-func ReadCharacterData(path string) error {
-	var characterJson charactersJson
+	if C.IsDead {
+		status = append(status, "[red::bi]DEAD[-::-]")
+	}
+
+	if C.IsAbandoned {
+		status = append(status, "[purple::bi]Abandoned[-::-]")
+	}
+
+	if len(status) > 0 {
+		statusString = fmt.Sprintf("(%s)", strings.Join(status, " & "))
+	}
+
+	return fmt.Sprintf("[yellow::b]%s[-::-] %s\n\n", C.Name, statusString)
+}
+
+func (C *Character) xpString() string {
+	return fmt.Sprintf("Level: %-3d (XP: %d%s)\n\n", C.Level(), C.XP, C.xpDebtString())
+}
+
+func (C *Character) xpDebtString() string {
+	if C.XP_Debt > 0 {
+		return fmt.Sprintf("; Debt: %d", C.XP_Debt)
+	}
+
+	return ""
+}
+
+/*
+// characterData struct
+*/
+
+type characterData struct {
+	Characters []Character
+	Path       string
+}
+
+func createCharacterData(path string) (*characterData, error) {
+	c := characterData{
+		Characters: make([]Character, 0, 10),
+		Path:       path,
+	}
+
+	if err := c.Read(); err != nil {
+		return nil, err
+	}
+
+	return &c, nil
+}
+
+func (C *characterData) Read() error {
+	var characterJson characterJson
 	var character Character
 
-	file, err := os.Open(path)
+	if C.Path == "" {
+		return errors.New("path is empty")
+	}
+
+	file, err := os.Open(C.Path)
 	if err != nil {
-		return err
+		return fmt.Errorf("CharacterData.Read(): %w", err)
 	}
 	defer file.Close()
 
@@ -68,31 +135,22 @@ func ReadCharacterData(path string) error {
 		if err := json.Unmarshal([]byte(c), &character); err != nil {
 			return err
 		}
-		CharacterData = append(CharacterData, character)
+		C.Characters = append(C.Characters, character)
 	}
-
-	// Save the filepath we read from
-	CharacterPath = path
 
 	return nil
 }
 
-func WriteCharacterData(path string) error {
-	jdata := charactersJson{}
+func (C *characterData) Write(file io.Writer) error {
+	jdata := characterJson{}
 
-	file, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
+	log.Printf("Writing Character data to %q\n", file)
 
-	log.Printf("Writing Character data to %q\n", path)
-
-	sort.Slice(CharacterData, func(i, j int) bool {
-		return CharacterData[i].ChrSlot < CharacterData[j].ChrSlot
+	sort.Slice(C.Characters, func(i, j int) bool {
+		return C.Characters[i].Slot < C.Characters[j].Slot
 	})
 
-	for _, c := range CharacterData {
+	for _, c := range C.Characters {
 		cdata, err := json.Marshal(c)
 		if err != nil {
 			return err
@@ -106,4 +164,26 @@ func WriteCharacterData(path string) error {
 	}
 
 	return nil
+}
+
+func (C *characterData) Print(view *tview.TextView, index int, shortcut rune) {
+	// Clear the current content of the TextView
+	view.Clear()
+
+	if shortcut == 'q' {
+		fmt.Fprintln(view, "[green]Exit the Character Editor without Saving[-]")
+		return
+	}
+
+	if index < 0 || index >= len(C.Characters) {
+		fmt.Fprintln(view, "Invalid Character")
+		return
+	}
+
+	char := &C.Characters[index]
+
+	// Iterate through characters and print each item to the TextView
+	fmt.Fprint(view, char.nameString())
+	fmt.Fprint(view, char.xpString())
+	fmt.Fprintf(view, "Known Talents: %d\n", len(char.Talents))
 }
