@@ -166,24 +166,21 @@ func (C *characterData) Write(file io.Writer) error {
 	return nil
 }
 
-func (C *characterData) Print(view *tview.TextView, index int, shortcut rune) {
-	// Clear the current content of the TextView
-	view.Clear()
-
-	if shortcut == 'q' {
-		fmt.Fprintln(view, "[green]Exit the Character Editor without Saving[-]")
-		return
-	}
+func (C *characterData) Print(index int) tview.Primitive {
+	subView := tview.NewTextView()
+	subView.SetDynamicColors(true).SetBorderPadding(1, 1, 1, 1)
 
 	if index < 0 || index >= len(C.Characters) {
-		fmt.Fprintln(view, "Invalid Character")
-		return
+		fmt.Fprintln(subView, "Invalid Character")
+		return subView
 	}
 
 	char := &C.Characters[index]
 
 	// Iterate through characters and print each item to the TextView
-	fmt.Fprint(view, char.nameString())
-	fmt.Fprint(view, char.xpString())
-	fmt.Fprintf(view, "Known Talents: %d\n", len(char.Talents))
+	fmt.Fprint(subView, char.nameString())
+	fmt.Fprint(subView, char.xpString())
+	fmt.Fprintf(subView, "Known Talents: %d\n", len(char.Talents))
+
+	return subView
 }

@@ -6,6 +6,17 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
+
+	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
+)
+
+const (
+	Credits    = "Credits"
+	Refund     = "Refund"
+	Exotics    = "Exotic1"
+	ExoticsRed = "Exotic2"
 )
 
 type metaResources struct {
@@ -43,6 +54,28 @@ func createProfileData(path string) (*profileData, error) {
 	return &p, nil
 }
 
+func (C *profileData) Print() tview.Primitive {
+	table := tview.NewTable().SetBorders(false)
+	table.SetBorderPadding(1, 1, 1, 1)
+
+	table.SetCell(0, 0, tview.NewTableCell("UserID:").SetTextColor(tcell.ColorGreen))
+	table.SetCell(0, 1, tview.NewTableCell(C.Profile.UserID).SetTextColor(tcell.ColorWhite))
+
+	table.SetCell(2, 0, tview.NewTableCell("Credits:").SetTextColor(tcell.ColorGreen))
+	table.SetCell(2, 1, tview.NewTableCell(C.getMetaCountFor(Credits)).SetTextColor(tcell.ColorYellow))
+	table.SetCell(2, 2, tview.NewTableCell("Refund:").SetTextColor(tcell.ColorGreen))
+	table.SetCell(2, 3, tview.NewTableCell(C.getMetaCountFor(Refund)).SetTextColor(tcell.ColorYellow))
+
+	table.SetCell(4, 1, tview.NewTableCell("Purple").SetTextColor(tcell.ColorPurple).SetAlign(tview.AlignRight))
+	table.SetCell(4, 2, tview.NewTableCell("Red").SetTextColor(tcell.ColorRed).SetAlign(tview.AlignRight))
+
+	table.SetCell(5, 0, tview.NewTableCell("Exotics:").SetTextColor(tcell.ColorBlue))
+	table.SetCell(5, 1, tview.NewTableCell(C.getMetaCountFor(Exotics)).SetTextColor(tcell.ColorPurple).SetAlign(tview.AlignRight))
+	table.SetCell(5, 2, tview.NewTableCell(C.getMetaCountFor(ExoticsRed)).SetTextColor(tcell.ColorRed).SetAlign(tview.AlignRight))
+
+	return table
+}
+
 func (P *profileData) Read() error {
 	if P.Path == "" {
 		return errors.New("path is empty")
@@ -73,4 +106,18 @@ func (P *profileData) Write(file io.Writer) error {
 	}
 
 	return nil
+}
+
+func (P *profileData) metaMap() map[string]int {
+	m := make(map[string]int)
+
+	for _, meta := range P.Profile.MetaResources {
+		m[meta.MetaRow] = meta.Count
+	}
+
+	return m
+}
+
+func (P *profileData) getMetaCountFor(key string) string {
+	return strconv.Itoa(P.metaMap()[key])
 }
