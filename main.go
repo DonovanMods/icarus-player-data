@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/donovanmods/icarus-character-editor/lib/data"
+	tcell "github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
@@ -44,6 +45,15 @@ func startApp() {
 		app.Stop()
 	})
 
+	mainMenu.SetSelectedFunc(func(index int, mainText string, secondaryText string, shortcut rune) {
+		switch shortcut {
+		case 'p':
+			app.SetFocus(dataView)
+		case 'q':
+			app.Stop()
+		}
+	})
+
 	// Set the function to be called when a character is selected
 	mainMenu.SetChangedFunc(func(index int, mainText string, secondaryText string, shortcut rune) {
 		if shortcut == rune('q') {
@@ -55,7 +65,15 @@ func startApp() {
 
 		if shortcut == rune('p') {
 			dataView.Clear().SetTitle("[ Player Profile ]")
-			dataView.AddItem(data.ProfileData.Print(), 0, 1, false)
+			dataView.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+				switch event.Key() {
+				case tcell.KeyEsc:
+					app.SetFocus(mainMenu)
+					return nil
+				}
+				return event
+			})
+			dataView.AddItem(data.ProfileData.Print(), 0, 1, true)
 			return
 		}
 
@@ -69,11 +87,29 @@ func startApp() {
 	dataView.AddItem(data.CharacterData.Print(0), 0, 1, false)
 
 	// Create a layout using Flex to display the character list and the form side by side
-	flex := tview.NewFlex().
-		AddItem(mainMenu, 0, 1, true). // Left side: character list
-		AddItem(dataView, 0, 4, false) // Right side: character data
+	flex := tview.NewFlex()
+	flex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyRune:
+			// VIM style navigation
+			switch event.Rune() {
+			case 'k':
+				app.SetFocus(mainMenu.SetCurrentItem(mainMenu.GetCurrentItem() - 1))
+			case 'j':
+				app.SetFocus(mainMenu.SetCurrentItem(mainMenu.GetCurrentItem() + 1))
+			default:
+				return event
+			}
+		default:
+			return event
+		}
+		return nil
+	})
 
-	// Start the TUI application
+	flex.AddItem(mainMenu, 0, 1, true)  // Left side
+	flex.AddItem(dataView, 0, 4, false) // Right side
+
+	// Start the TUI Application
 	if err := app.SetRoot(flex, true).Run(); err != nil {
 		panic(err)
 	}

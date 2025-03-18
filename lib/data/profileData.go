@@ -5,18 +5,18 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"strconv"
 
-	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
 const (
-	Credits    = "Credits"
-	Refund     = "Refund"
-	Exotics    = "Exotic1"
-	ExoticsRed = "Exotic2"
+	Credits       = "Credits"
+	Refund        = "Refund"
+	PurpleExotics = "Exotic1"
+	RedExotics    = "Exotic2"
 )
 
 type metaResources struct {
@@ -39,12 +39,14 @@ type profile struct {
 type profileData struct {
 	Profile profile
 	Path    string
+	Dirty   bool
 }
 
 func createProfileData(path string) (*profileData, error) {
 	p := profileData{
 		Profile: profile{},
 		Path:    path,
+		Dirty:   false,
 	}
 
 	if err := p.Read(); err != nil {
@@ -54,26 +56,57 @@ func createProfileData(path string) (*profileData, error) {
 	return &p, nil
 }
 
-func (C *profileData) Print() tview.Primitive {
-	table := tview.NewTable().SetBorders(false)
-	table.SetBorderPadding(1, 1, 1, 1)
+func (P *profileData) Print() tview.Primitive {
+	saveCount := func(field string, text string) {
+		if text == "" {
+			return
+		}
 
-	table.SetCell(0, 0, tview.NewTableCell("UserID:").SetTextColor(tcell.ColorGreen))
-	table.SetCell(0, 1, tview.NewTableCell(C.Profile.UserID).SetTextColor(tcell.ColorWhite))
+		count, err := strconv.Atoi(text)
+		if err != nil {
+			log.Print(fmt.Errorf("unable to convert %s to int: %w", text, err))
+		}
 
-	table.SetCell(2, 0, tview.NewTableCell("Credits:").SetTextColor(tcell.ColorGreen))
-	table.SetCell(2, 1, tview.NewTableCell(C.getMetaCountFor(Credits)).SetTextColor(tcell.ColorYellow))
-	table.SetCell(2, 2, tview.NewTableCell("Refund:").SetTextColor(tcell.ColorGreen))
-	table.SetCell(2, 3, tview.NewTableCell(C.getMetaCountFor(Refund)).SetTextColor(tcell.ColorYellow))
+		P.setCountFor(field, count)
+		P.Dirty = true
+	}
 
-	table.SetCell(4, 1, tview.NewTableCell("Purple").SetTextColor(tcell.ColorPurple).SetAlign(tview.AlignRight))
-	table.SetCell(4, 2, tview.NewTableCell("Red").SetTextColor(tcell.ColorRed).SetAlign(tview.AlignRight))
+	form := tview.NewForm()
+	form.SetBorder(false).SetBorderPadding(1, 1, 1, 1)
 
-	table.SetCell(5, 0, tview.NewTableCell("Exotics:").SetTextColor(tcell.ColorBlue))
-	table.SetCell(5, 1, tview.NewTableCell(C.getMetaCountFor(Exotics)).SetTextColor(tcell.ColorPurple).SetAlign(tview.AlignRight))
-	table.SetCell(5, 2, tview.NewTableCell(C.getMetaCountFor(ExoticsRed)).SetTextColor(tcell.ColorRed).SetAlign(tview.AlignRight))
+	form.AddTextView("UserID", P.Profile.UserID, 40, 2, true, false)
+	form.AddInputField("Credits", P.getCountFor(Credits), 10, nil, func(text string) {
+		saveCount(Credits, text)
+	})
+	form.AddInputField("Refund", P.getCountFor(Refund), 10, nil, func(text string) {
+		saveCount(Refund, text)
+	})
+	form.AddInputField("Purple Exotics", P.getCountFor(PurpleExotics), 10, nil, func(text string) {
+		saveCount(PurpleExotics, text)
+	})
+	form.AddInputField("Red Exotics", P.getCountFor(RedExotics), 10, nil, func(text string) {
+		saveCount(RedExotics, text)
+	})
 
-	return table
+	// table := tview.NewTable().SetSelectable(true, true).SetBorders(false)
+	// table.SetBorderPadding(1, 1, 1, 1)
+
+	// table.SetCell(0, 0, tview.NewTableCell("UserID:").SetTextColor(tcell.ColorGreen).SetSelectable(false))
+	// table.SetCell(0, 1, tview.NewTableCell(C.Profile.UserID).SetTextColor(tcell.ColorWhite).SetSelectable(false))
+
+	// table.SetCell(2, 0, tview.NewTableCell("Credits:").SetTextColor(tcell.ColorGreen).SetSelectable(false))
+	// table.SetCell(2, 1, tview.NewTableCell(C.getMetaCountFor(Credits)).SetTextColor(tcell.ColorYellow).SetSelectable(true))
+	// table.SetCell(2, 2, tview.NewTableCell("Refund:").SetTextColor(tcell.ColorGreen).SetSelectable(false))
+	// table.SetCell(2, 3, tview.NewTableCell(C.getMetaCountFor(Refund)).SetTextColor(tcell.ColorYellow).SetSelectable(true))
+
+	// table.SetCell(4, 1, tview.NewTableCell("Purple").SetTextColor(tcell.ColorPurple).SetAlign(tview.AlignRight).SetSelectable(false))
+	// table.SetCell(4, 2, tview.NewTableCell("Red").SetTextColor(tcell.ColorRed).SetAlign(tview.AlignRight).SetSelectable(false))
+
+	// table.SetCell(5, 0, tview.NewTableCell("Exotics:").SetTextColor(tcell.ColorBlue).SetSelectable(false))
+	// table.SetCell(5, 1, tview.NewTableCell(C.getMetaCountFor(Exotics)).SetTextColor(tcell.ColorPurple).SetAlign(tview.AlignRight).SetSelectable(true))
+	// table.SetCell(5, 2, tview.NewTableCell(C.getMetaCountFor(ExoticsRed)).SetTextColor(tcell.ColorRed).SetAlign(tview.AlignRight).SetSelectable(true))
+
+	return form
 }
 
 func (P *profileData) Read() error {
@@ -95,6 +128,12 @@ func (P *profileData) Read() error {
 }
 
 func (P *profileData) Write(file io.Writer) error {
+	if !P.Dirty {
+		return nil
+	}
+
+	log.Printf("Writing Profile data to %q\n", file)
+
 	jdata, err := json.Marshal(P.Profile)
 	if err != nil {
 		return err
@@ -118,6 +157,19 @@ func (P *profileData) metaMap() map[string]int {
 	return m
 }
 
-func (P *profileData) getMetaCountFor(key string) string {
+func (P *profileData) getCountFor(key string) string {
 	return strconv.Itoa(P.metaMap()[key])
+}
+
+func (P *profileData) setCountFor(key string, count int) {
+	if _, ok := P.metaMap()[key]; !ok {
+		P.Profile.MetaResources = append(P.Profile.MetaResources, metaResources{MetaRow: key, Count: count})
+		return
+	}
+
+	for i, meta := range P.Profile.MetaResources {
+		if meta.MetaRow == key {
+			P.Profile.MetaResources[i].Count = count
+		}
+	}
 }
