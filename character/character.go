@@ -8,10 +8,8 @@ import (
 	"log"
 	"os"
 	"sort"
-	"strings"
 
 	"github.com/donovanmods/icarus-player-data/lib/shared"
-	"github.com/rivo/tview"
 )
 
 type Cosmetics struct {
@@ -57,37 +55,6 @@ func (C *Character) Level() int {
 	xpTable := shared.BuildExperienceTable()
 
 	return xpTable.Level(C.XP)
-}
-
-func (C *Character) nameString() string {
-	status := make([]string, 0, 2)
-	statusString := ""
-
-	if C.IsDead {
-		status = append(status, "[red::bi]DEAD[-::-]")
-	}
-
-	if C.IsAbandoned {
-		status = append(status, "[purple::bi]Abandoned[-::-]")
-	}
-
-	if len(status) > 0 {
-		statusString = fmt.Sprintf("(%s)", strings.Join(status, " & "))
-	}
-
-	return fmt.Sprintf("[yellow::b]%s[-::-] %s\n\n", C.Name, statusString)
-}
-
-func (C *Character) xpString() string {
-	return fmt.Sprintf("Level: %-3d (XP: %d%s)\n\n", C.Level(), C.XP, C.xpDebtString())
-}
-
-func (C *Character) xpDebtString() string {
-	if C.XP_Debt > 0 {
-		return fmt.Sprintf("; Debt: %d", C.XP_Debt)
-	}
-
-	return ""
 }
 
 /*
@@ -165,23 +132,4 @@ func (C *CharacterData) Write(file io.Writer) error {
 	}
 
 	return nil
-}
-
-func (C *CharacterData) Print(index int) tview.Primitive {
-	subView := tview.NewTextView()
-	subView.SetDynamicColors(true).SetBorderPadding(1, 1, 1, 1)
-
-	if index < 0 || index >= len(C.Characters) {
-		fmt.Fprintln(subView, "Invalid Character")
-		return subView
-	}
-
-	char := &C.Characters[index]
-
-	// Iterate through characters and print each item to the TextView
-	fmt.Fprint(subView, char.nameString())
-	fmt.Fprint(subView, char.xpString())
-	fmt.Fprintf(subView, "Known Talents: %d\n", len(char.Talents))
-
-	return subView
 }

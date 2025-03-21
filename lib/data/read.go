@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/donovanmods/icarus-player-data/lib/character"
-	"github.com/donovanmods/icarus-player-data/lib/profile"
+	"github.com/donovanmods/icarus-player-data/character"
+	"github.com/donovanmods/icarus-player-data/profile"
 )
 
 var (
