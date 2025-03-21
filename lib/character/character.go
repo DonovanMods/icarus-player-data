@@ -1,4 +1,4 @@
-package data
+package character
 
 import (
 	"encoding/json"
@@ -10,10 +10,11 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/donovanmods/icarus-player-data/lib/shared"
 	"github.com/rivo/tview"
 )
 
-type cosmetics struct {
+type Cosmetics struct {
 	CustomizationHead           int64 `json:"Customization_Head"`
 	CustomizationHair           int64 `json:"Customization_Hair"`
 	CustomizationHairColor      int64 `json:"Customization_HairColor"`
@@ -37,23 +38,23 @@ type characterJson struct {
 // Character struct
 */
 type Character struct {
-	Name           string          `json:"CharacterName"`
-	Slot           int             `json:"ChrSlot"`
-	XP             uint64          `json:"XP"`
-	XP_Debt        uint64          `json:"XP_Debt"`
-	IsDead         bool            `json:"IsDead"`
-	IsAbandoned    bool            `json:"IsAbandoned"`
-	LastProspectId string          `json:"LastProspectId"`
-	Location       string          `json:"Location"`
-	UnlockedFlags  []int           `json:"UnlockedFlags"`
-	MetaResources  []metaResources `json:"MetaResources"`
-	Cosmetic       cosmetics       `json:"Cosmetic"`
-	Talents        []talents       `json:"Talents"`
-	TimeLastPlayed uint64          `json:"TimeLastPlayed"`
+	Name           string                   `json:"CharacterName"`
+	Slot           int                      `json:"ChrSlot"`
+	XP             uint64                   `json:"XP"`
+	XP_Debt        uint64                   `json:"XP_Debt"`
+	IsDead         bool                     `json:"IsDead"`
+	IsAbandoned    bool                     `json:"IsAbandoned"`
+	LastProspectId string                   `json:"LastProspectId"`
+	Location       string                   `json:"Location"`
+	UnlockedFlags  []int                    `json:"UnlockedFlags"`
+	MetaResources  [](shared.MetaResources) `json:"MetaResources"`
+	Cosmetic       Cosmetics                `json:"Cosmetic"`
+	Talents        [](shared.Talents)       `json:"Talents"`
+	TimeLastPlayed uint64                   `json:"TimeLastPlayed"`
 }
 
 func (C *Character) Level() int {
-	xpTable := buildExperienceTable()
+	xpTable := shared.BuildExperienceTable()
 
 	return xpTable.Level(C.XP)
 }
@@ -93,15 +94,15 @@ func (C *Character) xpDebtString() string {
 // characterData struct
 */
 
-type characterData struct {
+type CharacterData struct {
 	Characters []Character
-	Path       string
+	path       string
 }
 
-func createCharacterData(path string) (*characterData, error) {
-	c := characterData{
+func NewCharacterData(path string) (*CharacterData, error) {
+	c := CharacterData{
 		Characters: make([]Character, 0, 10),
-		Path:       path,
+		path:       path,
 	}
 
 	if err := c.Read(); err != nil {
@@ -111,15 +112,15 @@ func createCharacterData(path string) (*characterData, error) {
 	return &c, nil
 }
 
-func (C *characterData) Read() error {
+func (C *CharacterData) Read() error {
 	var characterJson characterJson
 	var character Character
 
-	if C.Path == "" {
+	if C.path == "" {
 		return errors.New("path is empty")
 	}
 
-	file, err := os.Open(C.Path)
+	file, err := os.Open(C.path)
 	if err != nil {
 		return fmt.Errorf("CharacterData.Read(): %w", err)
 	}
@@ -141,7 +142,7 @@ func (C *characterData) Read() error {
 	return nil
 }
 
-func (C *characterData) Write(file io.Writer) error {
+func (C *CharacterData) Write(file io.Writer) error {
 	jdata := characterJson{}
 
 	log.Printf("Writing Character data to %q\n", file)
@@ -166,7 +167,7 @@ func (C *characterData) Write(file io.Writer) error {
 	return nil
 }
 
-func (C *characterData) Print(index int) tview.Primitive {
+func (C *CharacterData) Print(index int) tview.Primitive {
 	subView := tview.NewTextView()
 	subView.SetDynamicColors(true).SetBorderPadding(1, 1, 1, 1)
 

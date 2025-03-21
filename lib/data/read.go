@@ -6,11 +6,14 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/donovanmods/icarus-player-data/lib/character"
+	"github.com/donovanmods/icarus-player-data/lib/profile"
 )
 
 var (
-	CharacterData *characterData
-	ProfileData   *profileData
+	CharacterData *character.CharacterData
+	ProfileData   *profile.ProfileData
 )
 
 func Read() error {
@@ -30,7 +33,7 @@ func Read() error {
 			if filepath.Base(path) == "Characters.json" {
 				log.Printf("Reading Character data from %q\n", path)
 
-				CharacterData, err = createCharacterData(path)
+				CharacterData, err = character.NewCharacterData(path)
 				if err != nil {
 					return fmt.Errorf("reading Character data: %w", err)
 				}
@@ -41,7 +44,7 @@ func Read() error {
 			if filepath.Base(path) == "Profile.json" {
 				log.Printf("Reading Profile data from %q", path)
 
-				ProfileData, err = createProfileData(path)
+				ProfileData, err = profile.NewProfileData(path)
 				if err != nil {
 					return fmt.Errorf("reading Profile data: %w", err)
 				}

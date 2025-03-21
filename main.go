@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/donovanmods/icarus-character-editor/lib/data"
+	"github.com/donovanmods/icarus-player-data/lib/data"
 	tcell "github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )

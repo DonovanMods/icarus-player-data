@@ -1,4 +1,4 @@
-package data
+package profile
 
 import (
 	"encoding/json"
@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/donovanmods/icarus-player-data/lib/shared"
 	"github.com/rivo/tview"
 )
 
@@ -19,31 +20,21 @@ const (
 	RedExotics    = "Exotic2"
 )
 
-type metaResources struct {
-	MetaRow string `json:"MetaRow"`
-	Count   int    `json:"Count"`
-}
-
-type talents struct {
-	RowName string `json:"RowName"`
-	Rank    int    `json:"Rank"`
-}
-
 type profile struct {
-	UserID        string          `json:"UserID"`
-	MetaResources []metaResources `json:"MetaResources"`
-	UnlockedFlags []int           `json:"UnlockedFlags"`
-	Talents       []talents       `json:"Talents"`
+	UserID        string                 `json:"UserID"`
+	MetaResources []shared.MetaResources `json:"MetaResources"`
+	UnlockedFlags []int                  `json:"UnlockedFlags"`
+	Talents       []shared.Talents       `json:"Talents"`
 }
 
-type profileData struct {
+type ProfileData struct {
 	Profile profile
 	Path    string
 	Dirty   bool
 }
 
-func createProfileData(path string) (*profileData, error) {
-	p := profileData{
+func NewProfileData(path string) (*ProfileData, error) {
+	p := ProfileData{
 		Profile: profile{},
 		Path:    path,
 		Dirty:   false,
@@ -56,7 +47,7 @@ func createProfileData(path string) (*profileData, error) {
 	return &p, nil
 }
 
-func (P *profileData) Print() tview.Primitive {
+func (P *ProfileData) Print() tview.Primitive {
 	saveCount := func(field string, text string) {
 		if text == "" {
 			return
@@ -109,7 +100,7 @@ func (P *profileData) Print() tview.Primitive {
 	return form
 }
 
-func (P *profileData) Read() error {
+func (P *ProfileData) Read() error {
 	if P.Path == "" {
 		return errors.New("path is empty")
 	}
@@ -127,7 +118,7 @@ func (P *profileData) Read() error {
 	return nil
 }
 
-func (P *profileData) Write(file io.Writer) error {
+func (P *ProfileData) Write(file io.Writer) error {
 	if !P.Dirty {
 		return nil
 	}
@@ -147,7 +138,7 @@ func (P *profileData) Write(file io.Writer) error {
 	return nil
 }
 
-func (P *profileData) metaMap() map[string]int {
+func (P *ProfileData) metaMap() map[string]int {
 	m := make(map[string]int)
 
 	for _, meta := range P.Profile.MetaResources {
@@ -157,13 +148,13 @@ func (P *profileData) metaMap() map[string]int {
 	return m
 }
 
-func (P *profileData) getCountFor(key string) string {
+func (P *ProfileData) getCountFor(key string) string {
 	return strconv.Itoa(P.metaMap()[key])
 }
 
-func (P *profileData) setCountFor(key string, count int) {
+func (P *ProfileData) setCountFor(key string, count int) {
 	if _, ok := P.metaMap()[key]; !ok {
-		P.Profile.MetaResources = append(P.Profile.MetaResources, metaResources{MetaRow: key, Count: count})
+		P.Profile.MetaResources = append(P.Profile.MetaResources, shared.MetaResources{MetaRow: key, Count: count})
 		return
 	}
 

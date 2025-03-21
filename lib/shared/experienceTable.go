@@ -1,4 +1,4 @@
-package data
+package shared
 
 type experienceTable struct {
 	Level      int
@@ -8,7 +8,7 @@ type experienceTable struct {
 
 type ExperienceTable []experienceTable
 
-func buildExperienceTable() *ExperienceTable {
+func BuildExperienceTable() *ExperienceTable {
 	ExperienceTable := make(ExperienceTable, 0, 101)
 
 	for i := 0; i <= 100; i++ {
