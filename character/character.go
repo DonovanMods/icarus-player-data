@@ -3,10 +3,8 @@ package character
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log"
-	"os"
 	"sort"
 
 	"github.com/donovanmods/icarus-player-data/lib/shared"
@@ -60,38 +58,33 @@ func (C *Character) Level() int {
 /*
 // characterData struct
 */
-
 type CharacterData struct {
 	Characters []Character
-	path       string
+	Dirty      bool
 }
 
-func NewCharacterData(path string) (*CharacterData, error) {
+// NewCharacterData creates a new CharacterData struct
+func NewCharacterData(r io.Reader) (*CharacterData, error) {
 	c := CharacterData{
 		Characters: make([]Character, 0, 10),
-		path:       path,
+		Dirty:      false,
 	}
 
-	if err := c.Read(); err != nil {
+	if err := c.Read(r); err != nil {
 		return nil, err
 	}
 
 	return &c, nil
 }
 
-func (C *CharacterData) Read() error {
+// Read reads the CharacterData from an io.Reader
+func (C *CharacterData) Read(file io.Reader) error {
 	var characterJson characterJson
 	var character Character
 
-	if C.path == "" {
-		return errors.New("path is empty")
+	if file == nil {
+		return errors.New("CharacterData.Read(): input is nil - expected an io.Reader")
 	}
-
-	file, err := os.Open(C.path)
-	if err != nil {
-		return fmt.Errorf("CharacterData.Read(): %w", err)
-	}
-	defer file.Close()
 
 	// Read the file and unmarshal the JSON data into the Characters slice
 	if err := json.NewDecoder(file).Decode(&characterJson); err != nil {
@@ -109,8 +102,18 @@ func (C *CharacterData) Read() error {
 	return nil
 }
 
+// Write writes the CharacterData to an io.Writer
+// The function will only write if data has been altered
 func (C *CharacterData) Write(file io.Writer) error {
 	jdata := characterJson{}
+
+	if !C.Dirty {
+		return nil
+	}
+
+	if file == nil {
+		return errors.New("CharacterData.Write(): input is nil - expected an io.WriteCloser")
+	}
 
 	log.Printf("Writing Character data to %q\n", file)
 
