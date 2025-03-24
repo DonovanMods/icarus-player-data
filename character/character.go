@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"io/fs"
 	"log"
+	"os"
+	"path/filepath"
 	"sort"
 
 	"github.com/donovanmods/icarus-player-data/lib/shared"
@@ -58,23 +61,56 @@ func (C *Character) Level() int {
 */
 type CharacterData struct {
 	Characters []Character
+	Metadata   shared.Metadata
 }
 
 // NewCharacterData creates a new CharacterData struct
-func NewCharacterData(r io.Reader) (*CharacterData, error) {
+func NewCharacterData() (*CharacterData, error) {
 	c := CharacterData{
 		Characters: make([]Character, 0, 16),
+		Metadata:   shared.Metadata{FileName: "Characters.json"},
 	}
 
-	if err := c.Read(r); err != nil {
+	if err := c.Read(); err != nil {
 		return nil, err
 	}
 
 	return &c, nil
 }
 
+// Read attempts to find and read the CharacterData
+func (C *CharacterData) Read() error {
+	appDataDir, err := os.UserCacheDir()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	readData := func(path string, file fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !file.IsDir() && filepath.Base(path) == C.Metadata.FileName {
+			if err := shared.ReadDataTo(path, C); err != nil {
+				return err
+			}
+			C.Metadata.Path = path
+		}
+
+		return nil
+	}
+
+	playerData := filepath.Join(appDataDir, "Icarus", "Saved", "PlayerData")
+
+	if err := filepath.WalkDir(playerData, readData); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Read reads the CharacterData from an io.Reader
-func (C *CharacterData) Read(file io.Reader) error {
+func (C *CharacterData) ReadF(file io.Reader) error {
 	var characterJson characterJson
 	var character Character
 
@@ -98,9 +134,23 @@ func (C *CharacterData) Read(file io.Reader) error {
 	return nil
 }
 
+// Write writes the ProfileData to a file
+func (C *CharacterData) Write() error {
+	if C.Metadata.Path == "" {
+		return errors.New("CharacterData.Write(): Metadata.Path is empty")
+	}
+
+	file, err := os.Create(C.Metadata.Path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	return C.WriteF(file)
+}
+
 // Write writes the CharacterData to an io.Writer
-// The function will only write if data has been altered
-func (C *CharacterData) Write(file io.Writer) error {
+func (C *CharacterData) WriteF(file io.Writer) error {
 	jdata := characterJson{}
 
 	if file == nil {
