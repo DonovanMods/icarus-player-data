@@ -110,8 +110,6 @@ func (P *ProfileData) WriteF(file io.Writer) error {
 		return errors.New("ProfileData.Write(): input is nil - expected an io.Writer")
 	}
 
-	log.Printf("Writing Profile data to %q\n", file)
-
 	jdata, err := json.Marshal(P)
 	if err != nil {
 		return err

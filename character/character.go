@@ -157,8 +157,6 @@ func (C *CharacterData) WriteF(file io.Writer) error {
 		return errors.New("CharacterData.Write(): input is nil - expected an io.WriteCloser")
 	}
 
-	log.Printf("Writing Character data to %q\n", file)
-
 	sort.Slice(C.Characters, func(i, j int) bool {
 		return C.Characters[i].Slot < C.Characters[j].Slot
 	})
