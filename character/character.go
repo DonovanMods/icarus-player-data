@@ -30,23 +30,21 @@ type characterJson struct {
 	JsonData []string `json:"Characters.json"`
 }
 
-/*
-// Character struct
-*/
+// Character data
 type Character struct {
-	Name           string                   `json:"CharacterName"`
-	Slot           int                      `json:"ChrSlot"`
-	XP             uint64                   `json:"XP"`
-	XP_Debt        uint64                   `json:"XP_Debt"`
-	IsDead         bool                     `json:"IsDead"`
-	IsAbandoned    bool                     `json:"IsAbandoned"`
-	LastProspectId string                   `json:"LastProspectId"`
-	Location       string                   `json:"Location"`
-	UnlockedFlags  []int                    `json:"UnlockedFlags"`
-	MetaResources  [](shared.MetaResources) `json:"MetaResources"`
-	Cosmetic       Cosmetics                `json:"Cosmetic"`
-	Talents        [](shared.Talents)       `json:"Talents"`
-	TimeLastPlayed uint64                   `json:"TimeLastPlayed"`
+	Name           string                 `json:"CharacterName"`
+	Slot           int                    `json:"ChrSlot"`
+	XP             uint64                 `json:"XP"`
+	XP_Debt        uint64                 `json:"XP_Debt"`
+	IsDead         bool                   `json:"IsDead"`
+	IsAbandoned    bool                   `json:"IsAbandoned"`
+	LastProspectId string                 `json:"LastProspectId"`
+	Location       string                 `json:"Location"`
+	UnlockedFlags  []int                  `json:"UnlockedFlags"`
+	MetaResources  []shared.MetaResources `json:"MetaResources"`
+	Cosmetic       Cosmetics              `json:"Cosmetic"`
+	Talents        []shared.Talents       `json:"Talents"`
+	TimeLastPlayed uint64                 `json:"TimeLastPlayed"`
 }
 
 func (C *Character) Level() int {
@@ -60,14 +58,12 @@ func (C *Character) Level() int {
 */
 type CharacterData struct {
 	Characters []Character
-	Dirty      bool
 }
 
 // NewCharacterData creates a new CharacterData struct
 func NewCharacterData(r io.Reader) (*CharacterData, error) {
 	c := CharacterData{
-		Characters: make([]Character, 0, 10),
-		Dirty:      false,
+		Characters: make([]Character, 0, 16),
 	}
 
 	if err := c.Read(r); err != nil {
@@ -106,10 +102,6 @@ func (C *CharacterData) Read(file io.Reader) error {
 // The function will only write if data has been altered
 func (C *CharacterData) Write(file io.Writer) error {
 	jdata := characterJson{}
-
-	if !C.Dirty {
-		return nil
-	}
 
 	if file == nil {
 		return errors.New("CharacterData.Write(): input is nil - expected an io.WriteCloser")
